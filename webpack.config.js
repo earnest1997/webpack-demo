@@ -2,6 +2,9 @@ var webpack = require("webpack");
 var path = require("path");
 var HtmlWebpackPlugin = require("html-webpack-plugin");
 var MiniCssExtractPlugin = require("mini-css-extract-plugin");
+var happyPack = require("happypack");
+var os = require("os");
+var happyThreadPool = happyPack.ThreadPool({ size: os.cpus().length });
 module.exports = {
   entry: "./src/index.js",
   output: {
@@ -13,11 +16,7 @@ module.exports = {
       {
         test: /\.js$/,
         use: {
-          loader: "babel-loader",
-          options: {
-            presets: ["@babel/preset-env"],
-            plugins: ["@babel/plugin-transform-runtime"]
-          }
+          loader: "happypack/loader?id=happyBabel"
         },
         exclude: /node_modules/ //正则表达式或者字符串
       },
@@ -26,10 +25,7 @@ module.exports = {
         use: [
           { loader: "style-loader" },
           {
-            loader: "css-loader",
-            options: {
-              modules: true
-            }
+            loader: "happypack/loader?id=happyCss"
           }
         ]
       },
@@ -42,12 +38,7 @@ module.exports = {
         exclude: /node_modules/,
         // 将文件转换成base64编码的uri
         use: {
-          loader: "url-loader",
-          options: {
-            limit: 5000, //限制打包图片的大小：
-            //如果大于或等于5000Byte，则按照相应的文件名和路径打包图片；如果小于5000Byte，则将图片转成base64格式的字符串。
-            name: "img/[name]-[hash:8].[ext]"
-          }
+          loader: "happypack/loader?id=happyImg"
         }
       },
       {
@@ -113,6 +104,7 @@ module.exports = {
   },
   stats: { children: false },
   plugins: [
+    new webpack.HotModuleReplacementPlugin(),
     // 将 webpack中`entry`配置的相关入口chunk  和  `extract-text-webpack-plugin`抽取的css样式   插入到该插件提供的`template`或者`templateContent`配置项指定的内容基础上生成一个html文件，具体插入方式是将样式`link`插入到`head`元素中，`script`插入到`head`或者`body`中。
     new HtmlWebpackPlugin({
       // html文件的title
@@ -126,6 +118,51 @@ module.exports = {
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[id].css"
+    }),
+    new happyPack({
+      id: "happyBabel",
+      loaders: [
+        {
+          loader: "babel-loader",
+          options: {
+            presets: ["@babel/preset-env"],
+            plugins: ["@babel/plugin-transform-runtime"],
+            cacheDirectory: true
+          }
+        }
+      ],
+      // 多个 HappyPack 实例都使用同一个共享进程池中的子进程去处理任务，以防止资源占用过多
+      threadPool: happyThreadPool,
+      //允许 HappyPack 输出日志
+      verbose: true
+    }),
+    new happyPack({
+      id: "happyCss",
+      loaders: [
+        {
+          loader: "css-loader",
+          options: {
+            modules: true
+          }
+        }
+      ],
+      threadPool: happyThreadPool,
+      verbose: true
+    }),
+    new happyPack({
+      id: "happyImg",
+      loaders: [
+        {
+          loader: "url-loader",
+          options: {
+            limit: 5000, //限制打包图片的大小：
+            //如果大于或等于5000Byte，则按照相应的文件名和路径打包图片；如果小于5000Byte，则将图片转成base64格式的字符串。
+            name: "img/[name]-[hash:8].[ext]"
+          }
+        }
+      ],
+      threadPool: happyThreadPool,
+      verbose: true
     })
   ]
 };

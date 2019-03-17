@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import "./index.css";
+import style from "./index.css";
 
 class Counter extends React.Component {
   constructor(props) {
@@ -22,7 +22,8 @@ class Counter extends React.Component {
 
   render() {
     return (
-      <div>
+      <div className={style.test}>
+        opp
         <input type="button" value="减1" onClick={this.decrease} />
         <span> {this.state.number} </span>
         <input type="button" value="加1" onClick={this.increase} />
